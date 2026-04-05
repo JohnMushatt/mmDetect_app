@@ -13,7 +13,10 @@ from mmdetect.transport import (
 from mmdetect.transport.wifi_transport import DEFAULT_PORT
 logger = logging.getLogger(__name__)
 
-
+from collections import deque
+import math
+TRAIL_LENGTH = 100 # Number of historical frames to keep track of
+MAX_STALE_FRAMES = 20 # Prune tracks if no update for this many frames
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -47,7 +50,7 @@ class MainWindow(QMainWindow):
         #self._refresh_ports()
         serial_layout.addWidget(self._port_combo)
         self._refresh_btn = QPushButton("Refresh")
-#        self._refresh_btn.clicked.connect(self._refresh_ports)
+        self._refresh_btn.clicked.connect(self._refresh_ports)
         serial_layout.addWidget(self._refresh_btn)
         self._config_stack.addWidget(serial_config)
         """
@@ -91,6 +94,111 @@ class MainWindow(QMainWindow):
         self._plot.addItem(self._scatter)
         root_layout.addWidget(self._plot)
 
+
+        self._tracks: dict[int, deque] = {} # Frame ID -> deque of targets
+        self._track_misses: dict[int, int] = {} # Track ID -> number of frames since last update
+        self._next_track_id = 0
+        self._max_association_dist_mm = 500
+
+        # Trail scatter
+        self._trail_scatter = pg.ScatterPlotItem(size=6,
+         pen=pg.mkPen(color=(0, 120, 255, 100), width=1),
+         brush=pg.mkBrush(color=(0, 120, 255, 100)))
+        self._plot.addItem(self._trail_scatter)
+
+        # Direction arrows per target
+        self._arrow_items: dict[pg.ArrowItem] = [] # Target ID -> ArrowItem
+    # Trail tracking
+    def _associate_targets(self, detections: list[tuple[float, float]]) -> None:
+        """Match new detections to existing tracks via nearest-neighbor, or create new tracks."""
+        used_tracks = set()
+        used_detections = set()
+        # Build cost matrix: (track_id, det_idx) -> distance
+        assignments = []
+        for det_idx, (dx, dy) in enumerate(detections):
+            for track_id, trail in self._tracks.items():
+                last_x, last_y = trail[-1]
+                dist = math.hypot(dx - last_x, dy - last_y)
+                assignments.append((dist, track_id, det_idx))
+        assignments.sort()  # greedy nearest-neighbor
+        for dist, track_id, det_idx in assignments:
+            if track_id in used_tracks or det_idx in used_detections:
+                continue
+            if dist > self._max_association_dist_mm:
+                continue
+            self._tracks[track_id].append(detections[det_idx])
+            used_tracks.add(track_id)
+            used_detections.add(det_idx)
+        # Create new tracks for unmatched detections
+        for det_idx, (dx, dy) in enumerate(detections):
+            if det_idx not in used_detections:
+                self._tracks[self._next_track_id] = deque(maxlen=TRAIL_LENGTH)
+                self._tracks[self._next_track_id].append((dx, dy))
+                self._track_misses[self._next_track_id] = 0
+                self._next_track_id += 1
+        # Optionally: prune stale tracks that haven't been updated
+        # (track_ids not in used_tracks for N consecutive frames)
+        stale_ids = []
+        for track_id in list(self._tracks.keys()):
+            if track_id in used_tracks:
+                self._track_misses[track_id] = 0
+            else:
+                self._track_misses[track_id] = self._track_misses.get(track_id, 0) + 1
+                if self._track_misses[track_id] >= MAX_STALE_FRAMES:
+                    stale_ids.append(track_id)
+        for track_id in stale_ids:
+            del self._tracks[track_id]
+            del self._track_misses[track_id]
+
+
+    def _update_trail_display(self) -> None:
+        """Render trails with fading opacity and direction arrows."""
+        spots = []
+        # Per-track color palette
+        colors = [
+            (0, 120, 255),   # blue
+            (255, 80, 80),    # red
+            (80, 220, 80),    # green
+        ]
+        # Clear old arrows
+        for arrow in self._arrow_items:
+            self._plot.removeItem(arrow)
+        self._arrow_items.clear()
+        current_points_x = []
+        current_points_y = []
+        for i, (track_id, trail) in enumerate(self._tracks.items()):
+            r, g, b = colors[i % len(colors)]
+            trail_list = list(trail)
+            for j, (x, y) in enumerate(trail_list):
+                # Opacity fades from dim (oldest) to bright (newest)
+                alpha = int(40 + 200 * (j / max(len(trail_list) - 1, 1)))
+                spots.append({
+                    'pos': (x, y),
+                    'size': 4 + 6 * (j / max(len(trail_list) - 1, 1)),
+                    'brush': pg.mkBrush(r, g, b, alpha),
+                })
+            # Current position (last point)
+            if trail_list:
+                cx, cy = trail_list[-1]
+                current_points_x.append(cx)
+                current_points_y.append(cy)
+            # Direction arrow from second-to-last to last point
+            if len(trail_list) >= 2:
+                x0, y0 = trail_list[-2]
+                x1, y1 = trail_list[-1]
+                angle = math.degrees(math.atan2(y1 - y0, x1 - x0))
+                arrow = pg.ArrowItem(
+                    pos=(x1, y1),
+                    angle=-angle + 180,  # pyqtgraph angle convention
+                    tipAngle=30,
+                    headLen=15,
+                    brush=pg.mkBrush(r, g, b, 220),
+                    pen=pg.mkPen(r, g, b, 220),
+                )
+                self._plot.addItem(arrow)
+                self._arrow_items.append(arrow)
+        self._trail_scatter.setData(spots)
+        self._scatter.setData(current_points_x, current_points_y)
     # -- Transport management --
 
     def _create_transport(self) -> AbstractTransport:
@@ -150,11 +258,14 @@ class MainWindow(QMainWindow):
             frame = target.TargetFrame.from_bytes(data)
             valid = [t for t in frame.targets if t.is_valid]
             if valid:
-                x = np.array([t.x_mm for t in valid])
-                y = np.array([t.y_mm for t in valid])
-                self._log.append(f"Frame ID: {frame.frame_id}, Timestamp: {frame.timestamp_ms}, Targets: {len(valid)}")
+                directions = [(t.x_mm, t.y_mm) for t in valid]
 
-                self._scatter.setData(x, y)
+                #x = np.array([t.x_mm for t in valid])
+                #y = np.array([t.y_mm for t in valid])
+                self._log.append(f"Frame ID: {frame.frame_id}, Timestamp: {frame.timestamp_ms}, Targets: {len(valid)}")
+                self._associate_targets(directions)
+                self._update_trail_display()
+                #self._scatter.setData(x, y)
         except ValueError as exc:
             self._log.append(f"[ERROR] {exc}")
        # self._log.append(f"Target frame: {target_frame}")
