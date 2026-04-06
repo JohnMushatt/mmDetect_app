@@ -4,7 +4,7 @@ from collections import deque
 
 @dataclass
 class TrackedTarget:
-    tracl_id : int
+    track_id : int
     position : tuple[float, float] # (x, y) in room coordinates
     trail : deque[tuple[float, float]] # (x, y) in room coordinates
     velocity : tuple[float, float] = (0.0, 0.0) # (vx, vy) in room coordinates
@@ -38,7 +38,7 @@ class Tracker:
 
         assignments: list[tuple[float, int, int]] = []
         for det_idx, (dx, dy) in enumerate(detections):
-            for track_id, track in self._tracks.items():
+            for track_id, target in self._tracks.items():
                 last_x, last_y = target.position
                 # Calculate distance between detection and track position
                 dist = math.hypot(dx - last_x, dy - last_y)
@@ -56,7 +56,7 @@ class Tracker:
 
             target = self._tracks[track_id]
             old_pos = target.position
-            new_post = detections[det_idx]
+            new_pos = detections[det_idx]
             target.position = new_pos
             target.trail.append(new_pos)
             target.velocity = (new_pos[0] - old_pos[0], new_pos[1] - old_pos[1])
