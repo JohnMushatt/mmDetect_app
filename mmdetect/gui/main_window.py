@@ -7,16 +7,20 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Slot
 import mmdetect.models.target as target
+
 from mmdetect.transport import (
     AbstractTransport, TransportState, WifiTransport,
 )
 from mmdetect.transport.wifi_transport import DEFAULT_PORT
+
+from mmdetect.tracking.tracker import Tracker, TrackedTarget
+
 logger = logging.getLogger(__name__)
 
 from collections import deque
 import math
-TRAIL_LENGTH = 100 # Number of historical frames to keep track of
-MAX_STALE_FRAMES = 20 # Prune tracks if no update for this many frames
+#TRAIL_LENGTH = 100 # Number of historical frames to keep track of
+#MAX_STALE_FRAMES = 20 # Prune tracks if no update for this many frames
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -94,11 +98,12 @@ class MainWindow(QMainWindow):
         self._plot.addItem(self._scatter)
         root_layout.addWidget(self._plot)
 
-
-        self._tracks: dict[int, deque] = {} # Frame ID -> deque of targets
-        self._track_misses: dict[int, int] = {} # Track ID -> number of frames since last update
-        self._next_track_id = 0
-        self._max_association_dist_mm = 500
+        # 2026-04-05: Repalced GUI trail tracking with tracker class
+        self._tracker = Tracker(
+            max_association_dist=500.0,
+            max_stale_frames=20,
+            trail_length=100,
+        )
 
         # Trail scatter
         self._trail_scatter = pg.ScatterPlotItem(size=6,
@@ -109,8 +114,9 @@ class MainWindow(QMainWindow):
         # Direction arrows per target
         self._arrow_items: dict[pg.ArrowItem] = [] # Target ID -> ArrowItem
     # Trail tracking
+    """
     def _associate_targets(self, detections: list[tuple[float, float]]) -> None:
-        """Match new detections to existing tracks via nearest-neighbor, or create new tracks."""
+        #Match new detections to existing tracks via nearest-neighbor, or create new tracks.
         used_tracks = set()
         used_detections = set()
         # Build cost matrix: (track_id, det_idx) -> distance
@@ -149,7 +155,7 @@ class MainWindow(QMainWindow):
         for track_id in stale_ids:
             del self._tracks[track_id]
             del self._track_misses[track_id]
-
+    """
 
     def _update_trail_display(self) -> None:
         """Render trails with fading opacity and direction arrows."""
@@ -259,12 +265,13 @@ class MainWindow(QMainWindow):
             valid = [t for t in frame.targets if t.is_valid]
             if valid:
                 directions = [(t.x_mm, t.y_mm) for t in valid]
-
+                tracks = self._tracker.update(directions)
+                self._update_track_display(tracks)
                 #x = np.array([t.x_mm for t in valid])
                 #y = np.array([t.y_mm for t in valid])
                 self._log.append(f"Frame ID: {frame.frame_id}, Timestamp: {frame.timestamp_ms}, Targets: {len(valid)}")
-                self._associate_targets(directions)
-                self._update_trail_display()
+                #self._associate_targets(directions)
+                #self._update_trail_display()
                 #self._scatter.setData(x, y)
         except ValueError as exc:
             self._log.append(f"[ERROR] {exc}")
