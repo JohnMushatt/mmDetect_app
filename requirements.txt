@@ -3,3 +3,5 @@ pyqtgraph>=0.13
 pyserial>=3.5
 numpy>=1.26
 scipy>=1.13
+pydantic>=2.10
+pyyaml>=6.0

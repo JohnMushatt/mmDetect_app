@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal, Slot
-from mmdetect.radars.base import AbstractRadaDriver, Detection, DetectionFrame
+from mmdetect.radars.base import AbstractRadarDriver, Detection, DetectionFrame
 from mmdetect.transport.base import AbstractTransport
 
 
@@ -34,7 +34,7 @@ class RadarManager(QObject):
 
     detections_ready = Signal(list)
 
-    def __init__(self):
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._radars : dict[str, RadarInstance] = {}
 

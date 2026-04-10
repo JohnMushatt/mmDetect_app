@@ -1,0 +1,19 @@
+rooms:
+  - name: "Living Room"
+  width_m: 6.0
+  length_m: 4.0
+  radars:
+    - id: "radar1"
+      driver: "ld2450"
+      transport:
+        kind: "wifi"
+        host: "0.0.0.0"
+        port: 5000
+      pose:
+        x_m: 3.0
+        y_m: 0.0
+        heading_deg: 0
+tracking:
+  max_association_dist: 0.5
+  max_stale_frames: 20
+  trail_length: 100

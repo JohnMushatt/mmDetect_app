@@ -1,4 +1,4 @@
-from mmdeteect.radars.base import AbstractRadarDriver, Deteection, DetectionFrame
+from mmdetect.radars.base import AbstractRadarDriver, Detection, DetectionFrame
 from mmdetect.radars.ld2450 import LD2450Driver
 from mmdetect.radars.manager import RadarManager, RadarInstance
 
@@ -11,7 +11,7 @@ def get_driver(driver_id: str) -> AbstractRadarDriver:
     Return radar driver for given driver ID
     """
 
-    cls _DRIVER_REGISTRY.get(driver_id)
+    cls = _DRIVER_REGISTRY.get(driver_id)
 
     if cls is None:
         raise ValueError(

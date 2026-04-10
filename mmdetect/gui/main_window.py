@@ -14,9 +14,13 @@ from mmdetect.transport import (
 from mmdetect.transport.wifi_transport import DEFAULT_PORT
 
 from mmdetect.tracking.tracker import Tracker, TrackedTarget
-
+from mmdetect.radars.manager import RadarManager, RadarInstance
+from mmdetect.radars.ld2450 import LD2450Driver
+from mmdetect.transport.wifi_transport import WifiTransport
+from mmdetect.spatial.transform import CoordinateTransform, RadarPose
+from mmdetect.config import load_config
 logger = logging.getLogger(__name__)
-
+DEFAULT_CONFIG_PATH = "../config.yaml"
 from collections import deque
 import math
 #TRAIL_LENGTH = 100 # Number of historical frames to keep track of
@@ -97,14 +101,35 @@ class MainWindow(QMainWindow):
         self._scatter =pg.ScatterPlotItem(size=10, pen=pg.mkPen(None), brush=pg.mkBrush(color=(0, 120, 255, 200)))
         self._plot.addItem(self._scatter)
         root_layout.addWidget(self._plot)
-
+        # Load yaml config
+        #config = load_config("config.yaml")
+        config = load_config(DEFAULT_CONFIG_PATH)
         # 2026-04-05: Repalced GUI trail tracking with tracker class
         self._tracker = Tracker(
-            max_association_dist=500.0,
-            max_stale_frames=20,
-            trail_length=100,
+            max_association_dist=config.tracking.max_association_dist,
+            max_stale_frames=config.tracking.max_stale_frames,
+            trail_length=config.tracking.trail_length,
         )
-
+        # Radar manager 
+        manager = RadarManager()
+        for room_cfg in config.rooms:
+            for radar_cfg in room_cfg.radars:
+                transport = create_transport(radar_cfg.transport)
+                driver = get_driver(radar_cfg.driver)
+                pose = RadarPose(
+                    x_m=radar_cfg.pose.x_m,
+                    y_m=radar_cfg.pose.y_m,
+                    heading_deg=radar_cfg.pose.heading_deg,
+                )
+                transform = CoordinateTransform(pose)
+                instance = RadarInstance(
+                    radar_id=radar_cfg.id,
+                    transport=transport,
+                    driver=driver,
+                    transform=transform,
+                )
+                manager.add_radar(instance)
+                logger.info(f"Added radar: {radar_cfg.id}")
         # Trail scatter
         self._trail_scatter = pg.ScatterPlotItem(size=6,
          pen=pg.mkPen(color=(0, 120, 255, 100), width=1),

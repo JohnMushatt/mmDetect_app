@@ -27,7 +27,7 @@ class LD2450Driver(AbstractRadarDriver):
         try:
             frame = TargetFrame.from_bytes(data)
         except ValueError as err:
-            logger.debug("Invalid target frame: %s", err
+            logger.debug("Invalid target frame: %s", err)
             return None
 
         # Extract timestamp and convert to seconds

@@ -33,7 +33,7 @@ class Tracker:
         """
         Feed new detections into tracker, returns list of active tracks (not tracked targets)
         """
-        used_tracks = set[int] = set()
+        used_tracks: set[int] = set()
         used_detections: set[int] = set()
 
         assignments: list[tuple[float, int, int]] = []
@@ -72,7 +72,7 @@ class Tracker:
                 trail.append(pos)
                 self._tracks[self._next_track_id] = TrackedTarget(
                     track_id=self._next_track_id,
-                    position = pos,
+                    position = new_pos,
                     trail = trail,
                 )
                 self._next_track_id += 1

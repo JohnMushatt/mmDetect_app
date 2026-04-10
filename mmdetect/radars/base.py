@@ -1,4 +1,4 @@
-from future import annotations
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
@@ -13,7 +13,7 @@ class Detection:
     speed_mps : float
     timestamp_s : float
     radar_id : str = ""
-@dataClass(slots=True)
+@dataclass(slots=True)
 class DetectionFrame:
     """ 
     One frame of detections from a single radar
@@ -28,7 +28,7 @@ class AbstractRadarDriver(ABC):
     """
 
     @abstractmethod
-    def parse(self, data: btes) DetectionFrame | None:
+    def parse(self, data: bytes) -> DetectionFrame | None:
         """
         Parse raw bytes into a DetectionFrame object.
         """
