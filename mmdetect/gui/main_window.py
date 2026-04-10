@@ -1,6 +1,5 @@
 import logging
 import pyqtgraph as pg
-import numpy as np
 from PySide6.QtWidgets import (
     QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QHBoxLayout,
     QComboBox, QTextEdit, QLineEdit, QStackedWidget, QSpinBox,
@@ -16,9 +15,10 @@ from mmdetect.transport.wifi_transport import DEFAULT_PORT
 from mmdetect.tracking.tracker import Tracker, TrackedTarget
 from mmdetect.radars.manager import RadarManager, RadarInstance
 from mmdetect.radars.ld2450 import LD2450Driver
-from mmdetect.transport.wifi_transport import WifiTransport
 from mmdetect.spatial.transform import CoordinateTransform, RadarPose
 from mmdetect.config import load_config
+from mmdetect.tracking.tracker import TrackedTarget
+from mmdetect.config import TrackingConfig
 logger = logging.getLogger(__name__)
 DEFAULT_CONFIG_PATH = "../config.yaml"
 from collections import deque
@@ -111,7 +111,7 @@ class MainWindow(QMainWindow):
             trail_length=config.tracking.trail_length,
         )
         # Radar manager 
-        manager = RadarManager()
+        self._manager = RadarManager()
         for room_cfg in config.rooms:
             for radar_cfg in room_cfg.radars:
                 transport = create_transport(radar_cfg.transport)
@@ -128,7 +128,7 @@ class MainWindow(QMainWindow):
                     driver=driver,
                     transform=transform,
                 )
-                manager.add_radar(instance)
+                self._manager.add_radar(instance)
                 logger.info(f"Added radar: {radar_cfg.id}")
         # Trail scatter
         self._trail_scatter = pg.ScatterPlotItem(size=6,
@@ -137,7 +137,7 @@ class MainWindow(QMainWindow):
         self._plot.addItem(self._trail_scatter)
 
         # Direction arrows per target
-        self._arrow_items: dict[pg.ArrowItem] = [] # Target ID -> ArrowItem
+        self._arrow_items: list[pg.ArrowItem] = [] # Target ID -> ArrowItem
     # Trail tracking
     """
     def _associate_targets(self, detections: list[tuple[float, float]]) -> None:
@@ -197,9 +197,9 @@ class MainWindow(QMainWindow):
         self._arrow_items.clear()
         current_points_x = []
         current_points_y = []
-        for i, (track_id, trail) in enumerate(self._tracks.items()):
+        for i, target in enumerate(self._tracker.active_tracks):
+            trail_list = list(target.trail)
             r, g, b = colors[i % len(colors)]
-            trail_list = list(trail)
             for j, (x, y) in enumerate(trail_list):
                 # Opacity fades from dim (oldest) to bright (newest)
                 alpha = int(40 + 200 * (j / max(len(trail_list) - 1, 1)))
@@ -290,8 +290,8 @@ class MainWindow(QMainWindow):
             valid = [t for t in frame.targets if t.is_valid]
             if valid:
                 directions = [(t.x_mm, t.y_mm) for t in valid]
-                tracks = self._tracker.update(directions)
-                self._update_track_display(tracks)
+                self._tracker.update(directions)
+                self._update_trail_display()
                 #x = np.array([t.x_mm for t in valid])
                 #y = np.array([t.y_mm for t in valid])
                 self._log.append(f"Frame ID: {frame.frame_id}, Timestamp: {frame.timestamp_ms}, Targets: {len(valid)}")

@@ -7,8 +7,16 @@ import time
 from mmdetect.transport.base import AbstractTransport, TransportState
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_PORT = 5000
+import platform
+if platform.system() == "Windows":
+    DEFAULT_PORT = 7000
+elif platform.system() == "Darwin":
+    DEFAULT_PORT = 5000
+    # macOS-specific code
+elif platform.system() == "Linux":
+    DEFAULT_PORT = 5000
+else:
+    raise ValueError(f"Unsupported platform: {platform.system()}")
 RECV_BUFFER = 1024
 RECV_TIMEOUT_S = 0.5
 STALE_TIMEOUT_S = 5.0
