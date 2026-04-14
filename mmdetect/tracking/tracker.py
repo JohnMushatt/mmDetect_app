@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from collections import deque
-
+import math
 @dataclass
 class TrackedTarget:
     track_id : int
@@ -22,7 +22,7 @@ class Tracker:
         self._max_association_dist = max_association_dist
         self._max_stale_frames = max_stale_frames
         self._trail_length = trail_length
-        self._tracks : dict[int, TracketTarget] = {} # track_id -> TrackedTarget
+        self._tracks : dict[int, TrackedTarget] = {} # track_id -> TrackedTarget
         self._next_track_id : int = 0
 
     @property
@@ -69,10 +69,10 @@ class Tracker:
         for det_idx, (dx, dy) in enumerate(detections):
             if det_idx not in used_detections:
                 trail = deque(maxlen=self._trail_length)
-                trail.append(pos)
+                trail.append((dx, dy))
                 self._tracks[self._next_track_id] = TrackedTarget(
                     track_id=self._next_track_id,
-                    position = new_pos,
+                    position = (dx, dy),
                     trail = trail,
                 )
                 self._next_track_id += 1
@@ -89,6 +89,7 @@ class Tracker:
                     stale_ids.append(track_id)
         for track_id in stale_ids:
             del self._tracks[track_id]
+        return self.active_tracks
     
     def reset(self) -> None:
         self._tracks.clear()
