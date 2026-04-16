@@ -7,5 +7,4 @@ class Room:
     name : str
     width_m : float
     length_m : float
-    radar_poses : list[RadarPose] = field(Default_factory=list)
-    
+    radar_poses : list[RadarPose] = field(default_factory=list)

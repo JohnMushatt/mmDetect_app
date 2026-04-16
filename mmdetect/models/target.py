@@ -4,12 +4,10 @@ import struct
 from dataclasses import dataclass, field
 from typing import List
 from enum import IntEnum
-FRAME_HEADER = b'\xBB\xBB'
 
+FRAME_HEADER = b'\xBB\xBB'
 FRAME_TAIL = b'\xEE\xEE'
 
-FRAME_HEADER = b"\xBB\xBB"
-FRAME_TAIL = b"\xEE\xEE"
 PROTO_OVERHEAD = 8  # header(2) + msg_type(1) + payload_len(2) + checksum(1) + tail(2)
 MAX_TARGETS = 3
 TARGET_STRUCT = struct.Struct("<hhhH")  # x(i16) y(i16) speed(i16) resolution(u16)

@@ -8,19 +8,20 @@ from PySide6.QtCore import Slot
 import mmdetect.models.target as target
 
 from mmdetect.transport import (
-    AbstractTransport, TransportState, WifiTransport,
+    create_transport, AbstractTransport, TransportState, WifiTransport,
 )
 from mmdetect.transport.wifi_transport import DEFAULT_PORT
 
 from mmdetect.tracking.tracker import Tracker, TrackedTarget
+from mmdetect.radars.base import Detection
+from mmdetect.radars import get_driver
 from mmdetect.radars.manager import RadarManager, RadarInstance
 from mmdetect.radars.ld2450 import LD2450Driver
 from mmdetect.spatial.transform import CoordinateTransform, RadarPose
 from mmdetect.config import load_config
-from mmdetect.tracking.tracker import TrackedTarget
 from mmdetect.config import TrackingConfig
 logger = logging.getLogger(__name__)
-DEFAULT_CONFIG_PATH = "../config.yaml"
+DEFAULT_CONFIG_PATH = "mmdetect/config.yaml"
 from collections import deque
 import math
 #TRAIL_LENGTH = 100 # Number of historical frames to keep track of
@@ -130,6 +131,7 @@ class MainWindow(QMainWindow):
                 )
                 self._manager.add_radar(instance)
                 logger.info(f"Added radar: {radar_cfg.id}")
+        self._manager.detections_ready.connect(self._on_detections)
         # Trail scatter
         self._trail_scatter = pg.ScatterPlotItem(size=6,
          pen=pg.mkPen(color=(0, 120, 255, 100), width=1),
@@ -181,7 +183,11 @@ class MainWindow(QMainWindow):
             del self._tracks[track_id]
             del self._track_misses[track_id]
     """
-
+    @Slot(list)
+    def _on_detections(self, detections: list[Detection]) -> None:
+        points = [(d.x_local, d.y_local) for d in detections]
+        self._tracker.update(points)
+        self._update_trail_display()
     def _update_trail_display(self) -> None:
         """Render trails with fading opacity and direction arrows."""
         spots = []
@@ -268,6 +274,15 @@ class MainWindow(QMainWindow):
     """
     @Slot()
     def _toggle_connection(self):
+        if self._connected:
+            self._manager.stop_all()
+            self._connected = False
+            self._connect_btn.setText("Connect")
+        else:
+            self._manager.start_all()
+            self._connected = True
+            self._connect_btn.setText("Disconnect")
+        """
         if self._transport and (self._transport.is_connected or self._transport.isRunning()):
             self._teardown_transport()
             return
@@ -280,7 +295,7 @@ class MainWindow(QMainWindow):
 
         self._wire_transport(self._transport)
         self._transport.open()
-
+        """
     @Slot(bytes)
     def _on_bytes_received(self, data: bytes):
         hex_str = data.hex(" ")

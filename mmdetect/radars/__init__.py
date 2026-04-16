@@ -1,10 +1,12 @@
-from mmdetect.radars.base import AbstractRadarDriver, Detection, DetectionFrame
+from mmdetect.radars.base import AbstractRadarDriver
 from mmdetect.radars.ld2450 import LD2450Driver
 from mmdetect.radars.manager import RadarManager, RadarInstance
 
+
 _DRIVER_REGISTRY: dict[str, type[AbstractRadarDriver]] = {
-    "LD2450": LD2450Driver,
+    "ld2450": LD2450Driver,
 }
+
 
 def get_driver(driver_id: str) -> AbstractRadarDriver:
     """
@@ -22,8 +24,6 @@ def get_driver(driver_id: str) -> AbstractRadarDriver:
 
 __all__ = [
     "AbstractRadarDriver",
-    "Detection",
-    "DetectionFrame",
     "LD2450Driver",
     "RadarManager",
     "RadarInstance",

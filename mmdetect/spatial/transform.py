@@ -40,11 +40,18 @@ class CoordinateTransform:
         """
         Converts room coordinate to radar local coordinates
         """
-        dx = x_room - self._pose.x_m
-        dy = y_room - self._pose.y_m
+        dx = det.x_room - self._pose.x_m
+        dy = det.y_room - self._pose.y_m
         x_local = dx * self._cos + dy * self._sin
         y_local = -dx * self._sin + dy * self._cos
 
-        return x_local, y_local
+        det : Detection = Detection(
+            x_local=x_local,
+            y_local=y_local,
+            speed_mps=det.speed_mps,
+            timestamp_s=det.timestamp_s,
+            radar_id=det.radar_id
+        )
+        return det
 
     

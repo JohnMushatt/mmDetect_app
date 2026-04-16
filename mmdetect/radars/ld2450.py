@@ -21,7 +21,9 @@ class LD2450Driver(AbstractRadarDriver):
     @property
     def max_targets(self) -> int:
         return MAX_TARGETS
-
+    @property
+    def max_speed(self) -> float:
+        return 10.0 # m/s
     def parse(self, data: bytes) -> DetectionFrame | None:
         # Try to call TargetFrame.from_bytes to parse incoming byte stream
         try:

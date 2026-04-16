@@ -41,10 +41,11 @@ class RadarManager(QObject):
 
     @property
     def radar_ids(self) -> list[str]:
-        return list
+        return list(self._radars.keys())
     def add_radar(self, instance: RadarInstance) -> None:
         if instance.radar_id in self._radars:
-            raise ValueError(f"Radar with ID {instance_.radar_id} already exists")
+            raise ValueError(f"Radar with ID {instance.radar_id} already exists")
+
 
         instance.transport.bytes_received.connect(
             self._make_handler(instance)
@@ -66,7 +67,9 @@ class RadarManager(QObject):
     def start_all(self) -> None:
         for instance in self._radars.values():
             instance.transport.start()
-
+    def stop_all(self) -> None:
+        for instance in self._radars.values():
+            instance.transport.stop()
     def _make_handler(self, instance: RadarInstance):
         """
         Returns a slot bound to specified radar instance
@@ -97,5 +100,5 @@ class RadarManager(QObject):
                 detections = [instance.transform.to_room(d) for d in detections]
 
             if detections:
-                self.detections_ready_emit(detections)
+                self.detections_ready.emit(detections)
         return _on_bytes
