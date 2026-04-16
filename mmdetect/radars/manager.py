@@ -66,10 +66,10 @@ class RadarManager(QObject):
 
     def start_all(self) -> None:
         for instance in self._radars.values():
-            instance.transport.start()
+            instance.transport.open()
     def stop_all(self) -> None:
         for instance in self._radars.values():
-            instance.transport.stop()
+            instance.transport.close()
     def _make_handler(self, instance: RadarInstance):
         """
         Returns a slot bound to specified radar instance
@@ -90,7 +90,7 @@ class RadarManager(QObject):
                     y_local=d.y_local,
                     speed_mps=d.speed_mps,
                     timestamp_s=d.timestamp_s,
-                    radar_id=frame.radar_id,
+                    radar_id=instance.radar_id,
                 )
                 for d in detections
             ]

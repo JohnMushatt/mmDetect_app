@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(800, 600)
 
         self._transport: AbstractTransport | None = None
-
+        self._connected: bool = False
         # -- UI --
         central = QWidget()
         root_layout = QVBoxLayout(central)
@@ -96,8 +96,8 @@ class MainWindow(QMainWindow):
 
         # Real-time target display
         self._plot = pg.PlotWidget(title="Target Display")
-        self._plot.setLabel("bottom", "X", units="mm")
-        self._plot.setLabel("left", "Y", units="mm")
+        self._plot.setLabel("bottom", "X", units="m")
+        self._plot.setLabel("left", "Y", units="m")
         self._plot.setAspectLocked(True)
         self._scatter =pg.ScatterPlotItem(size=10, pen=pg.mkPen(None), brush=pg.mkBrush(color=(0, 120, 255, 200)))
         self._plot.addItem(self._scatter)
@@ -336,5 +336,5 @@ class MainWindow(QMainWindow):
     # -- Lifecycle --
 
     def closeEvent(self, event):
-        self._teardown_transport()
+        self._manager.stop_all()
         super().closeEvent(event)

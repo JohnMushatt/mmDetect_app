@@ -40,8 +40,8 @@ class CoordinateTransform:
         """
         Converts room coordinate to radar local coordinates
         """
-        dx = det.x_room - self._pose.x_m
-        dy = det.y_room - self._pose.y_m
+        dx = det.x_local - self._pose.x_m
+        dy = det.y_local - self._pose.y_m
         x_local = dx * self._cos + dy * self._sin
         y_local = -dx * self._sin + dy * self._cos
 
