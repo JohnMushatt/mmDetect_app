@@ -3,8 +3,9 @@ import pyqtgraph as pg
 from PySide6.QtWidgets import (
     QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QHBoxLayout,
     QComboBox, QTextEdit, QLineEdit, QStackedWidget, QSpinBox,
+    QTableWidget, QTableWidgetItem, QSplitter,
 )
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, Qt
 import mmdetect.models.target as target
 
 from mmdetect.transport import (
@@ -18,8 +19,8 @@ from mmdetect.radars import get_driver
 from mmdetect.radars.manager import RadarManager, RadarInstance
 from mmdetect.radars.ld2450 import LD2450Driver
 from mmdetect.spatial.transform import CoordinateTransform, RadarPose
-from mmdetect.config import load_config
-from mmdetect.config import TrackingConfig
+from mmdetect.config import TrackingConfig, RoomConfig, RadarConfig, load_config
+
 logger = logging.getLogger(__name__)
 DEFAULT_CONFIG_PATH = "mmdetect/config.yaml"
 from collections import deque
@@ -101,8 +102,19 @@ class MainWindow(QMainWindow):
         self._plot.setAspectLocked(True)
         self._scatter =pg.ScatterPlotItem(size=10, pen=pg.mkPen(None), brush=pg.mkBrush(color=(0, 120, 255, 200)))
         self._plot.addItem(self._scatter)
-        root_layout.addWidget(self._plot)
-        # Load yaml config
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.addWidget(self._plot)
+        # Target table
+        self._target_table = QTableWidget()
+        self._target_table.setColumnCount(7)
+        self._target_table.setHorizontalHeaderLabels([
+            "ID", "X (m)", "Y (m)", "Speed", "Heading", "Range", "Age"
+        ])
+        self._target_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self._target_table.setMaximumWidth(400)
+        splitter.addWidget(self._target_table)
+        root_layout.addWidget(splitter)      
+          # Load yaml config
         #config = load_config("config.yaml")
         config = load_config(DEFAULT_CONFIG_PATH)
         # 2026-04-05: Repalced GUI trail tracking with tracker class
@@ -131,6 +143,8 @@ class MainWindow(QMainWindow):
                 )
                 self._manager.add_radar(instance)
                 logger.info(f"Added radar: {radar_cfg.id}")
+            self._draw_room_overlay(room_cfg)  # <-- add this
+
         self._manager.detections_ready.connect(self._on_detections)
         # Trail scatter
         self._trail_scatter = pg.ScatterPlotItem(size=6,
@@ -236,6 +250,16 @@ class MainWindow(QMainWindow):
                 self._arrow_items.append(arrow)
         self._trail_scatter.setData(spots)
         self._scatter.setData(current_points_x, current_points_y)
+        tracks = self._tracker.active_tracks
+        self._target_table.setRowCount(len(tracks))
+        for row, t in enumerate(tracks):
+            self._target_table.setItem(row, 0, QTableWidgetItem(str(t.track_id)))
+            self._target_table.setItem(row, 1, QTableWidgetItem(f"{t.position[0]:.2f}"))
+            self._target_table.setItem(row, 2, QTableWidgetItem(f"{t.position[1]:.2f}"))
+            self._target_table.setItem(row, 3, QTableWidgetItem(f"{t.speed_mps:.2f} m/s"))
+            self._target_table.setItem(row, 4, QTableWidgetItem(f"{t.heading_deg:.1f}°"))
+            self._target_table.setItem(row, 5, QTableWidgetItem(f"{t.range_m:.2f} m"))
+            self._target_table.setItem(row, 6, QTableWidgetItem(str(t.age)))
     # -- Transport management --
 
     def _create_transport(self) -> AbstractTransport:
@@ -259,7 +283,39 @@ class MainWindow(QMainWindow):
             self._transport.stop()
             self._transport.deleteLater()
             self._transport = None
+    def _draw_room_overlay(self, room_cfg: RoomConfig) -> None:
+        room_rect = pg.QtWidgets.QGraphicsRectItem(0, 0, room_cfg.width_m, room_cfg.length_m)
+        room_rect.setPen(pg.mkPen(color=(200, 200, 200, 150), width=2, style=Qt.DashLine))
+        room_rect.setBrush(pg.mkBrush(None))
+        self._plot.addItem(room_rect)
 
+        for radar_cfg in room_cfg.radars:
+            radar_scatter = pg.ScatterPlotItem(
+                pos=[(radar_cfg.pose.x_m, radar_cfg.pose.y_m)],
+                size=14, symbol='t', brush=pg.mkBrush(255, 200, 0, 200)
+            )
+            self._plot.addItem(radar_scatter)
+
+            label = pg.TextItem(radar_cfg.id, anchor=(0.5, 1.5), color=(255, 200, 0))
+            label.setPos(radar_cfg.pose.x_m, radar_cfg.pose.y_m)
+            self._plot.addItem(label)
+
+            heading_rad = math.radians(radar_cfg.pose.heading_deg)
+            fov_half = math.radians(60)
+            cone_len = 2.0
+            x0, y0 = radar_cfg.pose.x_m, radar_cfg.pose.y_m
+            left_x = x0 + cone_len * math.cos(heading_rad - fov_half)
+            left_y = y0 + cone_len * math.sin(heading_rad - fov_half)
+            right_x = x0 + cone_len * math.cos(heading_rad + fov_half)
+            right_y = y0 + cone_len * math.sin(heading_rad + fov_half)
+            fov_line = pg.PlotDataItem(
+                [left_x, x0, right_x], [left_y, y0, right_y],
+                pen=pg.mkPen(255, 200, 0, 80, width=1, style=Qt.DashLine)
+            )
+            self._plot.addItem(fov_line)
+
+        self._plot.setXRange(-0.5, room_cfg.width_m + 0.5, padding=0)
+        self._plot.setYRange(-0.5, room_cfg.length_m + 0.5, padding=0)
     # -- Slots --
 
     @Slot(int)

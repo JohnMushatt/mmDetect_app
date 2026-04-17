@@ -4,7 +4,9 @@ from PySide6.QtWidgets import QApplication
 from mmdetect.gui.main_window import MainWindow
 
 def main():
-    
+    logging.basicConfig(level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
     app = QApplication(sys.argv)
     app.setApplicationName("mmDetect")
     app.setOrganizationName("mmDetect")

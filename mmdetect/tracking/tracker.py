@@ -8,6 +8,9 @@ class TrackedTarget:
     position : tuple[float, float] # (x, y) in room coordinates
     trail : deque[tuple[float, float]] # (x, y) in room coordinates
     velocity : tuple[float, float] = (0.0, 0.0) # (vx, vy) in room coordinates
+    heading_deg : float = 0.0 # heading in degrees
+    speed_mps : float = 0.0 # speed in meters per second
+    range_m : float = 0.0 # range in meters from tracked target to radar
     consecutive_misses : int = 0# For fading trail in GUI
     age : int = 0# For pruning stale tracks
 
@@ -60,6 +63,11 @@ class Tracker:
             target.position = new_pos
             target.trail.append(new_pos)
             target.velocity = (new_pos[0] - old_pos[0], new_pos[1] - old_pos[1])
+            target.speed_mps = math.hypot(*target.velocity)
+            target.heading_deg = math.degrees(math.atan2(target.velocity[1], target.velocity[0]))
+            if target.heading_deg < 0:
+                target.heading_deg += 360
+            target.range_m = math.hypot(*target.position)
             target.age += 1
             target.consecutive_misses = 0
             used_tracks.add(track_id)
@@ -90,7 +98,18 @@ class Tracker:
         for track_id in stale_ids:
             del self._tracks[track_id]
         return self.active_tracks
-    
+    @property
+    def heading_deg(self) -> float:
+        vx, vy = self.velocity
+        if vx == 0.0 and vy == 0.0:
+            return 0.0
+        return math.degrees(math.atan2(vy, vx))
+    @property
+    def range_m(self) -> float:
+        return math.hypot(*self.position)
+    @property
+    def velocity_magnitude(self) -> float:
+        return math.hypot(*self.velocity)
     def reset(self) -> None:
         self._tracks.clear()
         self._next_track_id = 0

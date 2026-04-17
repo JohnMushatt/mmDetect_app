@@ -6,7 +6,7 @@ rooms:
       - id: "radar_front"
         driver: "ld2450"
         transport: { kind: "wifi", host: "0.0.0.0", port: 7000 }
-        pose: { x_m: 3.0, y_m: 0.0, heading_deg: 0 }
+        pose: { x_m: 3.0, y_m: 0.0, heading_deg: 90 }
       - id: "radar_rear"
         driver: "ld2450"
         transport: { kind: "wifi", host: "0.0.0.0", port: 7001 }
