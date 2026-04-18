@@ -33,6 +33,7 @@ class RadarManager(QObject):
     """
 
     detections_ready = Signal(list)
+    raw_data_received = Signal(str, bytes)
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -76,10 +77,12 @@ class RadarManager(QObject):
         """
         @Slot(bytes)
         def _on_bytes(data: bytes) -> None:
+            self.raw_data_received.emit(instance.radar_id, data)
             # Grab data from driver layer, should have a parse function that returns a DetectionFrame
             frame = instance.driver.parse(data)
             # Check if empty frame, return early if so
             if frame is None:
+                logger.debug(f"Empty frame received from {instance.radar_id}")
                 return
             detections = list(frame.detections)
 

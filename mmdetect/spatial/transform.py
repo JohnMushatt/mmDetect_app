@@ -25,9 +25,10 @@ class CoordinateTransform:
         """
         Converts local (radar local) coordinate to room coordinates
         """
-        x_room_local = self._pose.x_m + det.x_local * self._cos - det.y_local * self._sin
-        y_room_local = self._pose.y_m + det.x_local * self._sin + det.y_local * self._cos
-
+        #x_room_local = self._pose.x_m + det.x_local * self._cos - det.y_local * self._sin
+        #y_room_local = self._pose.y_m + det.x_local * self._sin + det.y_local * self._cos
+        x_room_local = self._pose.x_m + det.x_local * self._sin - det.y_local * self._cos
+        y_room_local = self._pose.y_m + det.x_local * self._cos + det.y_local * self._sin
         return Detection(
             x_local=x_room_local,
             y_local=y_room_local,

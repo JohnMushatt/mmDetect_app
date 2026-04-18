@@ -41,7 +41,7 @@ def load_config(path: Path | str) -> AppConfig:
     path = Path(path)
 
     if not path.exists():
-
+        logging.warning(f"Config file not found at {path}")
         return AppConfig()
 
     with open(path) as f:

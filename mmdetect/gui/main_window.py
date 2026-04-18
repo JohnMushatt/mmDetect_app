@@ -125,6 +125,7 @@ class MainWindow(QMainWindow):
         )
         # Radar manager 
         self._manager = RadarManager()
+        self._manager.raw_data_received.connect(self._on_raw_data)
         for room_cfg in config.rooms:
             for radar_cfg in room_cfg.radars:
                 transport = create_transport(radar_cfg.transport)
@@ -197,6 +198,9 @@ class MainWindow(QMainWindow):
             del self._tracks[track_id]
             del self._track_misses[track_id]
     """
+    @Slot(str, bytes)
+    def _on_raw_data(self, radar_id: str, data: bytes):
+        self._log.append(f"[{radar_id}] {data.hex(' ')}")
     @Slot(list)
     def _on_detections(self, detections: list[Detection]) -> None:
         points = [(d.x_local, d.y_local) for d in detections]

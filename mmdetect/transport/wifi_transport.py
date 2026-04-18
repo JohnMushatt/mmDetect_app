@@ -11,10 +11,10 @@ import platform
 if platform.system() == "Windows":
     DEFAULT_PORT = 7000
 elif platform.system() == "Darwin":
-    DEFAULT_PORT = 5000
+    DEFAULT_PORT = 7000
     # macOS-specific code
 elif platform.system() == "Linux":
-    DEFAULT_PORT = 5000
+    DEFAULT_PORT = 7000
 else:
     raise ValueError(f"Unsupported platform: {platform.system()}")
 RECV_BUFFER = 1024
