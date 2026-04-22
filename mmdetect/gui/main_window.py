@@ -203,7 +203,7 @@ class MainWindow(QMainWindow):
         self._log.append(f"[{radar_id}] {data.hex(' ')}")
     @Slot(list)
     def _on_detections(self, detections: list[Detection]) -> None:
-        points = [(d.x_local, d.y_local) for d in detections]
+        points, radar_ids = [(d.x_local, d.y_local) for d in detections], [d.radar_id for d in detections]
         self._tracker.update(points)
         self._update_trail_display()
     def _update_trail_display(self) -> None:
