@@ -27,7 +27,7 @@ class CoordinateTransform:
         """
        #x_room_local = self._pose.x_m + det.x_local * self._cos + det.y_local * self._sin
         #y_room_local = self._pose.y_m + det.x_local * self._sin - det.y_local * self._cos
-        x_room_local = self._pose.x_m - det.y_local * self._cos + det.x_local * self._sin
+        x_room_local = self._pose.x_m - det.y_local * self._cos - det.x_local * self._sin
         y_room_local = self._pose.y_m - det.y_local * self._sin - det.x_local * self._cos
         #x_room_local = self._pose.x_m + det.x_local * self._sin - det.y_local * self._cos
         #y_room_local = self._pose.y_m + det.x_local * self._cos + det.y_local * self._sin

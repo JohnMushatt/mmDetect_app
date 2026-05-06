@@ -99,11 +99,13 @@ class MainWindow(QMainWindow):
         self._plot = pg.PlotWidget(title="Target Display")
         self._plot.setLabel("bottom", "X", units="m")
         self._plot.setLabel("left", "Y", units="m")
-        self._plot.setAspectLocked(True)
+        #self._plot.setAspectLocked(True)
         self._scatter =pg.ScatterPlotItem(size=10, pen=pg.mkPen(None), brush=pg.mkBrush(color=(0, 120, 255, 200)))
         self._plot.addItem(self._scatter)
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(self._plot)
+        splitter.setHandleWidth(10)
+        splitter.setChildrenCollapsible(False)
         # Target table
         self._target_table = QTableWidget()
         self._target_table.setColumnCount(7)
@@ -111,7 +113,7 @@ class MainWindow(QMainWindow):
             "ID", "X (m)", "Y (m)", "Speed", "Heading", "Range", "Age"
         ])
         self._target_table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self._target_table.setMaximumWidth(400)
+        #self._target_table.setMaximumWidth(400)
         splitter.addWidget(self._target_table)
         root_layout.addWidget(splitter)      
           # Load yaml config

@@ -5,11 +5,11 @@ rooms:
     radars:
       - id: "radar_front"
         driver: "ld2450"
-        transport: { kind: "wifi", host: "0.0.0.0", port: 7000 }
+        transport: { kind: "wifi", host: "0.0.0.0", port: 7001 }
         pose: { x_m: 3.0, y_m: 0.0, heading_deg: 90 }
       - id: "radar_rear"
         driver: "ld2450"
-        transport: { kind: "wifi", host: "0.0.0.0", port: 7001 }
+        transport: { kind: "wifi", host: "0.0.0.0", port: 7000 }
         pose: { x_m: 3.0, y_m: 4.0, heading_deg: 270 }
 tracking:
   max_association_dist: 0.5
